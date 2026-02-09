@@ -8,7 +8,6 @@ This is a collection of util scripts I add to my terminal configs.
 
 Clone the repository and run the `install` script with
 
-````sh
 ```sh
 TMP_DIR="$(mktemp -d)" git clone git@github.com:sebastae/term-utils "TMP_DIR/term-utils" && $TMP_DIR/term-utils/install
 ````
