@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+
+UTIL_FILE="utils.sh"
+
+err() {
+  echo -e "\e[1;31mError\e[0m: $@" >&2
+  exit 1
+}
+
+warn() {
+  echo -e "\e[1;33mWarning\e[0m: $@" >&2
+}
+
+info() {
+  echo -e "\e[1;36mInfo\e[0m: $@" >&2
+}
+
+install-with-pacman() {
+  sudo pacman -S "$1"
+}
+
+install-with-apt() {
+  sudo apt install "$1"
+}
+
+unknown-pkgmanager() {
+  warn "Could not determine package manager, please install $1 manually"
+}
+
+install-deps() {
+  info "Checking dependencies"
+
+  PKG_DEPS=(fzf git)
+  declare -a missing_deps=()
+
+  for dep in "${PKG_DEPS[@]}"; do
+    if command -v "$dep" >/dev/null 2>&1; then
+      info "$dep is installed ✅"
+    else
+      warn "$dep is not installed ❌"
+      missing_deps+="$dep"
+    fi
+  done
+
+  if [[ ! "${#missing_deps[@]}" -eq 0 ]]; then
+    printf "\e[1;33mWarning\e[0m: Some dependencies missing - install now? [y/n] "
+    local REPLY
+    read -n 1 REPLY
+    echo ""
+
+    if [[ "$REPLY" =~ ^(y|Y) ]]; then
+
+      # Determine which package manager to use
+      local installfn
+      if command -v "pacman" >/dev/null 2>&1; then
+        installfn="install-with-pacman"
+      elif command -v "apt" >/dev/null 2>&1; then
+        installfn="install-with-apt"
+      else
+        installfn="unknown-pkgmanager"
+      fi
+
+      # Update the package manager database
+      case "$installfn" in
+      "install-with-pacman")
+        sudo pacman -Sy
+        ;;
+      "install-with-apt")
+        sudo apt update
+        ;;
+      esac
+
+      for dep in "${missing_deps[@]}"; do
+        $installfn "$dep"
+      done
+    fi
+  fi
+
+  info "Dependency checking done"
+}
+
+insert-source() {
+  info "Inserting source statement"
+  
+  SOURCE_STATEMENT="source $1"
+
+  local rcfile
+  case "$(basename "$SHELL")" in
+    zsh) rcfile=".zshrc";;
+    bash) rcfile=".bashrc";;
+  esac
+
+  if [[ -z "$rcfile" ]]; then
+    warn "Could not determine rcfile to use, please add the following line to your rcfile"
+    echo "\n$SOURCE_STATEMENT\n"
+    return
+  fi
+
+  RCFILE_PATH="$HOME/$rcfile"
+
+  if [[ ! -f "$RCFILE_PATH" ]]; then
+    warn "Could not find rcfile, please add the following line to your rcfile"
+    echo "\n$SOURCE_STATEMENT\n"
+    return
+  fi
+
+  info "Found rcfile at $RCFILE_PATH"
+  if ( grep "$(basename "$1")" "$RCFILE_PATH" | grep -E '^\s*source' >/dev/null 2>&1 ); then
+    warn "$(basename "$1") already sourced in $RCFILE_PATH - ignoring"
+    return
+  fi
+
+  echo -e "\n$SOURCE_STATEMENT\n" >> "$RCFILE_PATH"
+  info "Added source statement to $RCFILE_PATH"
+}
+
+main() {
+  install-deps
+
+  # Copy util file to the home dir
+  COPY_SOURCE="$(dirname "$0")/$UTIL_FILE"
+  COPY_DEST="$HOME/.term-utils"
+
+  info "Copying $COPY_SOURCE to $COPY_DEST"
+
+  if [[ -f "$COPY_DEST" ]]; then
+    printf "\e[1;33mWarning\e[0m: $COPY_DEST already exists - replace? [y/n] "
+
+    local REPLY
+    read -n 1 REPLY
+
+    echo ""
+
+    [[ "$REPLY" =~ ^(y|Y) ]] || err "Do not replace - exiting"
+  fi
+
+  cp "$COPY_SOURCE" "$COPY_DEST"
+
+  if [[ -f "$COPY_DEST" ]]; then
+    insert-source "$COPY_DEST"
+  else
+    err "Copy unsuccessful - $COPY_DEST does not exist"
+  fi
+
+}
+
+main $@
