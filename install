@@ -30,7 +30,7 @@ unknown-pkgmanager() {
 install-deps() {
   info "Checking dependencies"
 
-  PKG_DEPS=(fzf git)
+  PKG_DEPS=(fzf git curl )
   declare -a missing_deps=()
 
   for dep in "${PKG_DEPS[@]}"; do

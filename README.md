@@ -26,3 +26,4 @@ Clone the `utils.sh` file to wherever you want it and source it from your shell 
 
 - `fzf`
 - `git`
+- `curl`
