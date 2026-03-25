@@ -59,3 +59,16 @@ function update-nvim() {
   )
   echo "Updated nvim"
 }
+
+# Read docker logs and de-structure structured logging
+function read-docker-java-log() {
+  while read -r LINE; do
+    # Strip control sequences and docker image prefix
+    CLEAN_LINE="$(echo -E "$LINE" | sed -r "s/\x1b\[([0-9]{1,3}(;[0-9]{1,2};?)?)=[mGK]//g;s/^[a-z0-9-]*\s*\|\s*//")"
+    if [[ "$CLEAN_LINE" =~ "^\{" ]]; then
+      echo -E "$CLEAN_LINE" | jq -r '"[\(.Level)] \(.Timestamp): \([.LogMessage, .Throwable.Exception, .Throwable.StackTrace] | .[] | select(. != null))"' || echo -E "$CLEAN_LINE"
+    else
+      echo -E "$CLEAN_LINE"
+    fi
+  done
+}

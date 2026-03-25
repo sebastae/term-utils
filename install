@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 UTIL_FILE="utils.sh"
+PKG_DEPS=(fzf git curl jq)
 
 err() {
   echo -e "\e[1;31mError\e[0m: $@" >&2
@@ -30,7 +31,6 @@ unknown-pkgmanager() {
 install-deps() {
   info "Checking dependencies"
 
-  PKG_DEPS=(fzf git curl )
   declare -a missing_deps=()
 
   for dep in "${PKG_DEPS[@]}"; do
